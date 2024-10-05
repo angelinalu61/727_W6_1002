@@ -1,0 +1,2 @@
+"0","stats_dat <- as.data.frame(stats_dat)"
+"0","names(stats_dat) <- c(""niche_grade"", ""acceptance_rate"", ""net_price"", ""SAT_range"")"

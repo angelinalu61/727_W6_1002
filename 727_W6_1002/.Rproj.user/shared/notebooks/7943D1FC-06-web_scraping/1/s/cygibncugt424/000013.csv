@@ -1,0 +1,4 @@
+"0","top_colleges$locations <- locations[-c(4,5,6,29,30,31)]"
+"2","Error in `$<-.data.frame`(`*tmp*`, locations, value = c(""Cambridge, MA·"",  : 
+  replacement has 87 rows, data has 25
+"

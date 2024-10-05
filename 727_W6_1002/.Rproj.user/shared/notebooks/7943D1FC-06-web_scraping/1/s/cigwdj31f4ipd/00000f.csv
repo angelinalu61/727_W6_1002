@@ -1,0 +1,1 @@
+"0","nds2 <- html_nodes(url, xpath = '//*[contains(concat( "" "", @class, "" "" ), concat( "" "", ""search-result-fact-list__item"", "" "" ))]')"

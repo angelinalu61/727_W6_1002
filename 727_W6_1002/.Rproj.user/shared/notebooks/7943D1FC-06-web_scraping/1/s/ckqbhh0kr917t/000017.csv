@@ -1,0 +1,9 @@
+"0","for(i in 1:npages) {"
+"0","  url <- paste0(""https://www.niche.com/colleges/search/best-colleges/?page=2"",i, sep = """")"
+"0","  src <- read_html(url)"
+"0","  print(url)"
+"0","  "
+"0"," "
+"0","}"
+"2","Error in open.connection(x, ""rb"") : HTTP error 403.
+"
