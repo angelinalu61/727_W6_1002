@@ -1,0 +1,192 @@
+---
+title: "Assignment3_Angelina Lu"
+author: "Angelina Lu"
+date: "2024-10-08"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+options(repos = c(CRAN = "http://cran.r-project.org"))
+knitr::opts_chunk$set(echo = TRUE,cache=TRUE, 
+                      autodep=TRUE, cache.comments=FALSE,
+                      message=FALSE, warning=FALSE,
+                      fig.width=4.5, fig.height=3)
+library(xml2)
+library(rvest)
+library(tidyverse)
+library(tidytext)
+library(robotstxt)
+```
+
+### Web Scraping
+
+```{r}
+paths_allowed("https://en.wikipedia.org/wiki/Grand_Boulevard,_Chicago")
+```
+```{r}
+url <- read_html("https://en.wikipedia.org/wiki/Grand_Boulevard,_Chicago")
+tables <- url %>% html_table(fill = TRUE)
+str(tables)
+```
+```{r}
+pop <- tables[[2]]
+
+pop <- pop[1:10, -3]
+print(pop)
+```
+
+### Expanding to More Pages
+
+```{r}
+adjacent_places <- tables[[4]]
+print(adjacent_places)
+```
+```{r}
+places_east <- adjacent_places[[3]][!is.na(adjacent_places[[2]])]
+places_east <- gsub(" ", "_", places_east)
+print(places_east)
+```
+
+```{r}
+for (i in places_east) {
+  url <- paste0("https://en.wikipedia.org/wiki/", i)
+}
+print(url)
+```
+
+```{r}
+places_east <- gsub(" ", "_", places_east)
+places_east <- gsub(",", ",_", places_east)
+
+pops <- pop
+for (i in places_east) {
+  url <- paste0("https://en.wikipedia.org/wiki/", i)
+  print(url)
+  
+  page <- tryCatch({
+    read_html(url)
+  }, error = function(e) {
+    message(paste("Error reading URL:", url))
+    return(NULL)
+  })
+  
+  if (!is.null(page)) {
+    tables <- html_table(page, fill = TRUE)
+    
+    if (length(tables) >= 3) { 
+      new_pop <- tables[[2]]
+      new_pop <- new_pop[1:10, -3]
+      
+      pops <- cbind(pops, new_pop)
+    } else {
+      message(paste("Historical population table not found for:", i))
+    }
+  }
+}
+
+print(pops)
+```
+
+### Scraping and Analyzing Text Data
+
+```{r}
+get_description <- function(url) {
+  page <- tryCatch({
+    read_html(url)
+  }, error = function(e) {
+    message(paste("Error reading URL:", url))
+    return(NULL)
+  })
+  
+  if (!is.null(page)) {
+    description <- page %>%
+      html_nodes("p") %>%
+      html_text() %>%
+      paste(collapse = ' ')
+    return(description)
+  } else {
+    return(NA)
+  }
+}
+
+
+descriptions <- tibble(
+  location = places_east,
+  text = sapply(paste0("https://en.wikipedia.org/wiki/", places_east), get_description)
+)
+
+print(descriptions)
+```
+
+```{r}
+tidy_data <- descriptions %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+print(head(tidy_data))
+
+common_words <- tidy_data %>%
+  count(word, sort = TRUE)
+
+print(head(common_words, 10))
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+locations <- unique(location_words$location)
+
+for (loc in locations) {
+  data_subset <- location_words %>% filter(location == loc)
+
+  p <- ggplot(data_subset, aes(x = reorder(word, n), y = n, fill = location)) +
+    geom_col(show.legend = FALSE) +
+    coord_flip() +
+    labs(title = paste("Most Common Words in", loc),
+         x = "Word",
+         y = "Frequency") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ 
+  print(p)
+
+  ggsave(filename = paste0("Most_Common_Words_in_", loc, ".png"), plot = p)
+}
+
+```
+
+
+
+```{r}
+tidy_data <- descriptions %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+print(head(tidy_data))
+
+common_words <- tidy_data %>%
+  count(word, sort = TRUE)
+
+print(head(common_words, 10))
+
+library(ggplot2)
+tidy_data <- tidy_data %>%
+  filter(!is.na(word), word != "")
+
+tidy_data %>%
+  count(location, word, sort = TRUE) %>%
+  group_by(location) %>%
+  top_n(10, n) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder(word, n), y = n, fill = location)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ location, scales = "free_y") +
+  coord_flip() +
+  labs(x = "Word",
+       y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
