@@ -189,4 +189,7 @@ tidy_data %>%
 
 ```
 
+There are some similarities and differences between the locations. For example, most of the communities share common words like "chicago," "neighborhood," "community," and "population." These words reflect the regional characteristics of these areas, indicating that they are all part of Chicago and their descriptions often focus on community, residents, and the nature of the area. Additionally, they frequently use words related to living and architecture, such as "residential" and "building," which suggests that their descriptions typically involve aspects of the residents and the community.
+
+On the other hand, some communities have unique descriptions highlighting their own geographical or historical features. For instance, "bronzeville" appears frequently in the Douglas community, while "hyde" and "kenwood" are found specifically in Hyde Park and Kenwood communities, respectively. We also observe words associated with specific cultures or ethnic groups. For example, "chinese" appears in the Armour Square community, possibly indicating a strong presence or close ties with the Chinese community in that area.
 
