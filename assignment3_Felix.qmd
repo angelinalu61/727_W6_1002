@@ -9,7 +9,6 @@ You may work in pairs or individually for this assignment. Make sure you join a 
 
 ```{r}
 library(xml2)
-library(rvest)
 library(tidyverse)
 library(rvest)
 library(jsonlite)
@@ -42,7 +41,8 @@ pop <- tables_grand_boulevard[2] %>%
   transmute(
     Census = factor(Census),
     Population = as.numeric(gsub(",", "", Pop.)), 
-    Percentage_Change = parse_number(gsub("−", "-", X..)) # Handle "−" and convert to numeric
+    Percentage_Change = parse_number(gsub("−", "-", X..)), # Handle "−" and convert to numeric
+    Community = "Grand Boulevard, Chicago"
   ) %>%
   # Filter out rows with NA or placeholder values more succinctly
   filter(!is.na(Census) & !is.na(Population))
@@ -119,8 +119,8 @@ for (i in 1:length(urls)) {
       transmute(
         Census = factor(Census),
         Population = as.numeric(gsub(",", "", Pop.)), 
-        Percentage_Change = parse_number(gsub("−", "-", X..))  # Handle "−" and convert to numeric
-        # Community = east_comms[i]
+        Percentage_Change = parse_number(gsub("−", "-", X..)),  # Handle "−" and convert to numeric
+        Community = east_comms[i]
       ) %>%
       # Filter out rows with NA or placeholder values more succinctly
       filter(!is.na(Census) & !is.na(Population))
@@ -137,6 +137,8 @@ for (i in 1:length(urls)) {
 pops
 ```
 
+*For this question, we decided to use rbind() instead of cbind() as it allows the dataframe to be in the long format. I am more familiar with long format and I would argue that the tidyverse is generally better suited to handle long data. This dataframe is ready to be used and many analyses may be performed on it. Additionally, Professor Kim gave us permission to do it this way in an email.*
+
 
 ## Scraping and Analyzing Text Data
 
@@ -147,20 +149,14 @@ First, scrape just the text without any of the information in the margins or hea
 ```{r}
 # Function to extract and clean text from a Wikipedia page
 extract_wiki_text <- function(url) {
-  # Read the HTML from the specified URL
   page <- read_html(url)
-  
-  # Extract the main content (the body text) from the page
-  # The main content is usually within the <p> tags
   text_nodes <- page %>% 
-    html_nodes("p") %>%  # Select all <p> tags
-    html_text()          # Extract text from the <p> tags
+    html_nodes("p") %>%  
+    html_text()          
   
-  # Collapse all text into a single string, separating by a space
   description <- paste(text_nodes, collapse = ' ')
   
-  # Clean up any extra whitespace
-  description <- gsub("\\s+", " ", description)  # Replace multiple spaces with a single space
+  description <- gsub("\\s+", " ", description)  
   
   return(description)
 }
@@ -235,7 +231,11 @@ Plot the most common words within each location. What are some of the similariti
 # Create tokens and remove stop words
 tidy_descriptions <- descriptions_df %>%
   unnest_tokens(word, Description) %>%     # Tokenize the text into words
-  anti_join(stop_words)                     # Remove stop words
+  anti_join(stop_words) %>%
+  mutate(
+    Location = gsub("_", " ", Location),        # Replace underscores with spaces
+    Location = gsub(", Chicago", "", Location)  # Remove ", Chicago"
+  )
 
 # View the tidy text data after removing stop words
 print(tidy_descriptions)
@@ -248,7 +248,21 @@ location_word_counts <- tidy_descriptions %>%
   group_by(Location) %>%
   slice_head(n = 10) %>%  # Get the top words
   ungroup()
+```
 
+```{r}
+# Get the top 25 most common words across all locations
+top_25_words <- location_word_counts %>%
+  group_by(word) %>%
+  summarise(total_n = sum(n)) %>%
+  arrange(desc(total_n)) %>%
+  slice_max(total_n, n = 25)
+```
+
+```{r}
+#| fig.width: 12
+#| fig.height: 8
+#| 
 ggplot(location_word_counts, aes(x = reorder(word, n), y = n, fill = Location)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ Location, scales = "free_y") +
@@ -263,5 +277,26 @@ ggplot(location_word_counts, aes(x = reorder(word, n), y = n, fill = Location)) 
 
 ```
 
+*There are some similarities and differences between the locations. For example, most of the communities share common words like "chicago," "neighborhood," "community," and "population." These words reflect the regional characteristics of these areas, indicating that they are all part of Chicago and their descriptions often focus on community, residents, and the nature of the area. Additionally, they frequently use words related to living and architecture, such as "residential" and "building," which suggests that their descriptions typically involve aspects of the residents and the community.*
 
+*On the other hand, some communities have unique descriptions highlighting their own geographical or historical features. For instance, "bronzeville" appears frequently in the Douglas community, while "hyde" and "kenwood" are found specifically in Hyde Park and Kenwood communities, respectively. We also observe words associated with specific cultures or ethnic groups. For example, "chinese" appears in the Armour Square community, possibly indicating a strong presence or close ties with the Chinese community in that area.*
 
+```{r}
+#| fig.width: 12
+#| fig.height: 8
+#| 
+# Plot the top 25 most common words
+ggplot(top_25_words, aes(x = reorder(word, total_n), y = total_n, fill = total_n)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "Frequency", title = "Top 25 Most Common Words Across All Commmunity Areas") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 10),  # Adjust y-axis label size for readability
+    plot.title = element_text(hjust = 0.5, size = 14)  # Center and size the plot title
+  ) +
+  scale_fill_gradient(low = "skyblue", high = "darkblue")
+```
+*The plot shows the top 25 most common words used across various community areas in Chicago. Similar to other community analyses, words like "park," "neighborhood," "community," and "street" frequently appear, suggesting a shared focus on the area's communal aspects and public spaces. These terms indicate that the descriptions often center around the residential character and landmarks within these neighborhoods.*
+
+*However, unique words like "hyde," "kenwood," and "bronzeville" reflect specific community identities. For example, "hyde" and "kenwood" are prominent in Hyde Park and Kenwood, emphasizing their individual characteristics and possibly well-known landmarks or historical significance. Similarly, "bronzeville" is associated with the Bronzeville area, highlighting its cultural heritage. Other terms such as "armour" and "black" suggest additional cultural or historical context that distinguishes one community from another. These differences underscore each community's unique contributions to the larger mosaic of Chicago, shaped by various cultural, historical, and geographical features.*
